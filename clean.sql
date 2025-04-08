@@ -17,9 +17,9 @@ WITH inserted_flights AS (
         NULLIF((state ->> 10), 'null')::DOUBLE PRECISION AS heading_degrees,
         NULLIF((state ->> 11), 'null')::DOUBLE PRECISION AS vertical_rate,
         to_timestamp((raw_json ->> 'time')::BIGINT) AT TIME ZONE 'UTC' AS timestamp
-    FROM flight_json_data
+    FROM flight_json_data, CROSS JOIN jsonb_array_elements(raw_json -> 'states') AS state
     WHERE jsonb_typeof(raw_json -> 'states') = 'array'
-    CROSS JOIN jsonb_array_elements(raw_json -> 'states') AS state
+
 )
 INSERT INTO flights (
     icao24,
