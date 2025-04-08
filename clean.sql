@@ -17,8 +17,9 @@ WITH inserted_flights AS (
         NULLIF((state ->> 10), 'null')::DOUBLE PRECISION AS heading_degrees,
         NULLIF((state ->> 11), 'null')::DOUBLE PRECISION AS vertical_rate,
         to_timestamp((raw_json ->> 'time')::BIGINT) AT TIME ZONE 'UTC' AS timestamp
-    FROM flight_json_data,
-         jsonb_array_elements(raw_json -> 'states') AS state
+    FROM flight_json_data
+    WHERE jsonb_typeof(raw_json -> 'states') = 'array'
+    CROSS JOIN jsonb_array_elements(raw_json -> 'states') AS state
 )
 INSERT INTO flights (
     icao24,
@@ -38,12 +39,16 @@ SELECT
     heading_degrees, vertical_rate, timestamp
 FROM inserted_flights;
 
+-- Safe delete: only delete rows where states is an array
 DELETE FROM flight_json_data
-WHERE id IN (
-    SELECT id
-    FROM flight_json_data,
-         jsonb_array_elements(raw_json -> 'states') AS state
-);
+WHERE jsonb_typeof(raw_json -> 'states') = 'array';
+
+-- DELETE FROM flight_json_data
+-- WHERE id IN (
+--     SELECT id
+--     FROM flight_json_data,
+--          jsonb_array_elements(raw_json -> 'states') AS state
+-- );
 
 -- =====================
 -- Insert weather records
